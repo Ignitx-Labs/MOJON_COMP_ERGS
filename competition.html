@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MOJON COMP ERGS — Live Dashboard</title>
+  <style>
+    :root {
+      --bg: #09090f; --panel: #111118; --border: #1e1e2e;
+      --accent: #00e5ff; --gold: #ffd700; --silver: #c0c0c0;
+      --bronze: #cd7f32; --text: #f0f0f0; --muted: #4a4a6a; --green: #00e676;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    /* ── Header ── */
+    #header {
+      height: 64px; background: linear-gradient(135deg,#0d0d1c,#131325);
+      border-bottom: 2px solid var(--accent);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 28px;
+    }
+    .logo { font-size: 1.55rem; font-weight: 900; letter-spacing: 4px; color: var(--accent);
+      text-shadow: 0 0 24px rgba(0,229,255,.45); text-transform: uppercase; }
+    .logo span { color: #fff; }
+    .header-right { display: flex; align-items: center; gap: 28px; }
+    .target-label { font-size: .75rem; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+    .target-label strong { display: block; font-size: 1.1rem; color: var(--accent); font-weight: 800; }
+    #race-timer { font-size: 2.4rem; font-weight: 800; font-variant-numeric: tabular-nums;
+      letter-spacing: 2px; color: #fff; min-width: 110px; text-align: right; }
+    #race-badge { font-size: .7rem; font-weight: 700; letter-spacing: 3px; padding: 5px 14px;
+      border-radius: 4px; border: 1.5px solid currentColor; text-transform: uppercase; }
+    .badge-setup    { color: var(--muted); }
+    .badge-running  { color: var(--green); animation: blink 1.4s ease-in-out infinite; }
+    .badge-finished { color: var(--gold); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+    /* ── Controls bar (setup mode only) ── */
+    #controls {
+      background: #0d0d1c; border-bottom: 1px solid var(--border);
+      padding: 12px 28px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    #controls label { font-size: .7rem; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+    #controls input, #controls select {
+      background: #0a0a18; border: 1px solid var(--border); color: var(--text);
+      padding: 7px 12px; border-radius: 6px; font-size: .85rem;
+    }
+    #controls input:focus, #controls select:focus { outline: none; border-color: var(--accent); }
+    #name-input { width: 160px; }
+    .btn { padding: 8px 18px; border: none; border-radius: 6px; cursor: pointer;
+      font-size: .75rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      transition: opacity .15s, transform .1s; }
+    .btn:active { transform: scale(.97); }
+    .btn-add    { background: var(--accent); color: #000; }
+    .btn-start  { background: var(--green); color: #000; }
+    .btn-reset  { background: #1e1e2e; color: var(--muted); border: 1px solid #333; }
+    #participant-count { font-size: .75rem; color: var(--muted); margin-left: auto; }
+
+    /* ── Main ── */
+    #main { display: flex; flex-direction: column; padding: 8px 14px; gap: 5px;
+      overflow: hidden; }
+
+    #col-headers {
+      display: grid;
+      grid-template-columns: 68px 1fr 200px 2fr 100px 96px 76px 72px;
+      gap: 8px; padding: 0 12px 2px;
+      font-size: .6rem; font-weight: 700; letter-spacing: 2.5px;
+      color: var(--muted); text-transform: uppercase;
+    }
+
+    /* ── Participant row ── */
+    .p-row {
+      background: var(--panel); border-radius: 8px; border-left: 4px solid var(--border);
+      display: grid; grid-template-columns: 68px 1fr 200px 2fr 100px 96px 76px 72px;
+      gap: 8px; align-items: center; padding: 0 12px;
+      transition: border-color .4s, background .4s; position: relative; overflow: hidden;
+    }
+    .p-row::before {
+      content:''; position:absolute; left:0;top:0;bottom:0;width:35%;
+      pointer-events:none; opacity:0; transition:opacity .4s;
+    }
+    .p-row.rank-1 { border-left-color: var(--gold); }
+    .p-row.rank-1::before { background:linear-gradient(90deg,rgba(255,215,0,.12),transparent); opacity:1; }
+    .p-row.rank-2 { border-left-color: var(--silver); }
+    .p-row.rank-2::before { background:linear-gradient(90deg,rgba(192,192,192,.09),transparent); opacity:1; }
+    .p-row.rank-3 { border-left-color: var(--bronze); }
+    .p-row.rank-3::before { background:linear-gradient(90deg,rgba(205,127,50,.09),transparent); opacity:1; }
+    .p-row.finished { border-left-color: var(--gold); opacity:.85; }
+
+    .rank-num { font-size:clamp(1.1rem,2.4vh,1.7rem); font-weight:900; text-align:center;
+      color:var(--muted); position:relative; z-index:1; }
+    .rank-1 .rank-num { color:var(--gold); }
+    .rank-2 .rank-num { color:var(--silver); }
+    .rank-3 .rank-num { color:var(--bronze); }
+    .finish-badge { font-size:.55rem; letter-spacing:1px; font-weight:700; color:var(--gold);
+      display:block; text-align:center; }
+
+    .p-name { font-size:clamp(.85rem,2vh,1.25rem); font-weight:700; letter-spacing:1px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase;
+      position:relative; z-index:1; }
+
+    .dist-label { font-size:clamp(.8rem,1.8vh,1.1rem); font-weight:800;
+      font-variant-numeric:tabular-nums; text-align:right; padding-right:6px;
+      position:relative; z-index:1; }
+    .dist-label .unit { font-size:.65em; font-weight:400; color:var(--muted); margin-left:2px; }
+
+    .prog-wrap { background:#18182a; border-radius:5px; height:clamp(10px,1.6vh,18px);
+      overflow:hidden; position:relative; z-index:1; }
+    .prog-fill { height:100%; border-radius:5px; transition:width .4s ease-out;
+      background:linear-gradient(90deg,#0066aa,var(--accent)); position:relative; }
+    .prog-fill::after { content:''; position:absolute; right:0;top:0;bottom:0; width:12px;
+      background:rgba(255,255,255,.35); border-radius:0 5px 5px 0; }
+    .rank-1 .prog-fill { background:linear-gradient(90deg,#b8860b,var(--gold)); }
+    .rank-2 .prog-fill { background:linear-gradient(90deg,#777,var(--silver)); }
+    .rank-3 .prog-fill { background:linear-gradient(90deg,#7b4a00,var(--bronze)); }
+
+    .metric { text-align:center; position:relative; z-index:1; }
+    .metric-val { font-size:clamp(.85rem,1.9vh,1.2rem); font-weight:700;
+      font-variant-numeric:tabular-nums; letter-spacing:.5px; }
+    .metric-lbl { font-size:.55rem; font-weight:600; letter-spacing:1.5px;
+      color:var(--muted); text-transform:uppercase; }
+
+    /* ── Waiting screen ── */
+    #waiting { flex:1; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:12px; color:var(--muted); }
+    #waiting .big { font-size:1.4rem; letter-spacing:4px; font-weight:700; text-transform:uppercase; }
+    #waiting .sub { font-size:.8rem; letter-spacing:2px; text-align:center; line-height:1.8; }
+
+    /* ── Finish flash ── */
+    #finish-flash { position:fixed; inset:0; pointer-events:none;
+      display:flex; align-items:center; justify-content:center; z-index:999;
+      opacity:0; transition:opacity .2s; }
+    #finish-flash.show { opacity:1; }
+    .finish-msg { background:rgba(0,0,0,.8); border:3px solid var(--gold);
+      border-radius:12px; padding:24px 48px; text-align:center; }
+    .finish-msg .label { font-size:.8rem; letter-spacing:3px; color:var(--gold); }
+    .finish-msg .name  { font-size:2.5rem; font-weight:900; letter-spacing:2px; margin-top:4px; }
+    .finish-msg .time  { font-size:1.2rem; color:var(--accent); margin-top:4px; }
+
+    /* ── ANT+ / WS status dot ── */
+    #ws-dot { width:8px;height:8px;border-radius:50%;background:#444;
+      display:inline-block;margin-right:5px;vertical-align:middle; }
+    #ws-dot.live { background:var(--green);box-shadow:0 0 8px var(--green); }
+    #ws-dot.demo { background:var(--accent);box-shadow:0 0 8px var(--accent); }
+    #ws-label { font-size:.65rem; color:var(--muted); }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <div class="logo">MOJON<span> COMP</span> ERGS</div>
+  <div class="header-right">
+    <div class="target-label">Target<strong id="target-val">2000 m</strong></div>
+    <div id="race-timer">00:00</div>
+    <div id="race-badge" class="badge-setup">SETUP</div>
+    <div><span id="ws-dot"></span><span id="ws-label">demo mode</span></div>
+  </div>
+</div>
+
+<!-- Setup controls (visible before race starts) -->
+<div id="controls">
+  <label>Athlete name</label>
+  <input id="name-input" type="text" placeholder="e.g. Alice" maxlength="20" autocomplete="off">
+  <button class="btn btn-add" onclick="addAthlete()">+ Add</button>
+  <label style="margin-left:12px">Target (m)</label>
+  <input id="target-input" type="number" value="2000" min="100" max="42195" step="100" style="width:90px">
+  <button class="btn btn-start" onclick="startRace()" id="btn-start" disabled>▶ Start Race</button>
+  <button class="btn btn-reset" onclick="resetAll()">↺ Reset</button>
+  <span id="participant-count">0 / 10 athletes</span>
+</div>
+
+<div id="main">
+  <div id="col-headers" style="display:none">
+    <div></div><div>Athlete</div>
+    <div style="text-align:right">Distance</div>
+    <div style="padding-left:8px">Progress</div>
+    <div>Pace /500m</div><div>Watts</div><div>SPM</div><div>Time</div>
+  </div>
+  <div id="rows" style="display:contents"></div>
+  <div id="waiting">
+    <div class="big">Add athletes to begin</div>
+    <div class="sub">
+      Type a name above and click <strong>+ Add</strong><br>
+      Add up to 10 athletes, then hit <strong>▶ Start Race</strong><br><br>
+      <span style="font-size:.7rem;color:#333">
+        For real ANT+ data: run <code style="color:var(--accent)">node server.js</code> on your machine<br>
+        and open <code style="color:var(--accent)">http://localhost:3000</code> instead
+      </span>
+    </div>
+  </div>
+</div>
+
+<div id="finish-flash">
+  <div class="finish-msg">
+    <div class="label">FINISHED</div>
+    <div class="name" id="flash-name">—</div>
+    <div class="time" id="flash-time">—</div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const TARGET_DEFAULT = 2000;
+let participants = [];   // { id, name, distance, watts, spm, pace, elapsedTime, finished, finishTime, speedBase, wattsBase, spmBase }
+let raceStatus   = 'setup';  // setup | running | finished
+let raceStart    = null;
+let target       = TARGET_DEFAULT;
+let simTimer     = null;
+let ws           = null;
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function fmtTime(s) {
+  if (!s || s < 0) return '00:00';
+  return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+}
+function fmtPace(p) {
+  if (!p || p <= 0 || p > 900) return '--:--';
+  return `${Math.floor(p/60)}:${String(Math.floor(p%60)).padStart(2,'0')}`;
+}
+function escHtml(s) {
+  return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function ranked() {
+  return [...participants]
+    .sort((a,b) => {
+      if (a.finished && b.finished) return a.finishTime - b.finishTime;
+      if (a.finished) return -1; if (b.finished) return 1;
+      return b.distance - a.distance;
+    })
+    .map((p,i) => ({...p, rank: i+1}));
+}
+
+// ── Add / Reset ────────────────────────────────────────────────────────────
+function addAthlete() {
+  const input = document.getElementById('name-input');
+  const name  = input.value.trim();
+  if (!name) return;
+  if (participants.length >= 10) { alert('Maximum 10 athletes'); return; }
+  participants.push({
+    id: `a${Date.now()}`, name,
+    distance:0, watts:0, spm:0, pace:0, elapsedTime:0,
+    finished:false, finishTime:null,
+    // randomised simulation profile
+    speedBase:  2.8 + Math.random() * 0.65,
+    wattsBase:  110 + Math.random() * 100,
+    spmBase:    19  + Math.random() * 9,
+  });
+  input.value = '';
+  input.focus();
+  updateSetupUI();
+  renderRows();
+}
+
+function resetAll() {
+  clearInterval(simTimer); simTimer = null;
+  participants = []; raceStatus = 'setup'; raceStart = null;
+  document.getElementById('controls').style.display = 'flex';
+  document.getElementById('race-badge').className = 'badge-setup';
+  document.getElementById('race-badge').textContent = 'SETUP';
+  document.getElementById('race-timer').textContent = '00:00';
+  updateSetupUI();
+  renderRows();
+}
+
+function updateSetupUI() {
+  const n = participants.length;
+  document.getElementById('participant-count').textContent = `${n} / 10 athletes`;
+  document.getElementById('btn-start').disabled = n === 0;
+}
+
+// ── Race ───────────────────────────────────────────────────────────────────
+function startRace() {
+  target     = Number(document.getElementById('target-input').value) || TARGET_DEFAULT;
+  raceStatus = 'running';
+  raceStart  = Date.now();
+
+  participants.forEach(p => {
+    p.distance=0; p.watts=0; p.spm=0; p.pace=0;
+    p.elapsedTime=0; p.finished=false; p.finishTime=null;
+  });
+
+  document.getElementById('controls').style.display = 'none';
+  document.getElementById('race-badge').className   = 'badge-running';
+  document.getElementById('race-badge').textContent = 'LIVE';
+  document.getElementById('target-val').textContent = `${target} m`;
+
+  renderRows();
+  startSimulation();
+}
+
+// ── Simulation ─────────────────────────────────────────────────────────────
+let lastTick = null;
+
+function startSimulation() {
+  lastTick = Date.now();
+  simTimer = setInterval(tick, 250);
+  requestAnimationFrame(timerRAF);
+}
+
+function tick() {
+  if (raceStatus !== 'running') return;
+  const now = Date.now();
+  const dt  = (now - lastTick) / 1000;
+  lastTick  = now;
+
+  let allDone = true;
+  participants.forEach(p => {
+    if (p.finished) return;
+    allDone = false;
+
+    const noise  = (Math.random() - 0.5) * 0.35;
+    const speed  = Math.max(0.5, p.speedBase + noise);
+    p.distance    += speed * dt;
+    p.watts        = Math.round(p.wattsBase  + (Math.random()-0.5)*22);
+    p.spm          = Math.round(p.spmBase    + (Math.random()-0.5)*2);
+    p.pace         = 500 / speed;
+    p.elapsedTime  = (now - raceStart) / 1000;
+
+    if (p.distance >= target) {
+      p.distance   = target;
+      p.finished   = true;
+      p.finishTime = now;
+      showFlash(p.name, (now - raceStart) / 1000);
+    }
+  });
+
+  renderRows();
+
+  if (allDone) {
+    raceStatus = 'finished';
+    clearInterval(simTimer);
+    document.getElementById('race-badge').className   = 'badge-finished';
+    document.getElementById('race-badge').textContent = 'FINISHED';
+  }
+}
+
+function timerRAF() {
+  if (raceStatus === 'running' && raceStart) {
+    document.getElementById('race-timer').textContent = fmtTime((Date.now()-raceStart)/1000);
+  }
+  requestAnimationFrame(timerRAF);
+}
+
+// ── Finish flash ───────────────────────────────────────────────────────────
+let flashT = null;
+function showFlash(name, secs) {
+  document.getElementById('flash-name').textContent = name.toUpperCase();
+  document.getElementById('flash-time').textContent = fmtTime(secs);
+  const el = document.getElementById('finish-flash');
+  el.classList.add('show');
+  clearTimeout(flashT);
+  flashT = setTimeout(()=>el.classList.remove('show'), 4000);
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function rowHeight() {
+  const n   = participants.length;
+  const hdr = document.getElementById('col-headers').offsetHeight || 0;
+  const avail = window.innerHeight - 64 - (raceStatus==='setup'?54:0) - hdr - 16 - (n-1)*5;
+  return Math.max(52, Math.floor(avail / Math.max(n, 1)));
+}
+
+function renderRows() {
+  const ps   = ranked();
+  const wait = document.getElementById('waiting');
+  const hdr  = document.getElementById('col-headers');
+  const cont = document.getElementById('rows');
+
+  if (ps.length === 0) {
+    wait.style.display = 'flex';
+    hdr.style.display  = 'none';
+    cont.innerHTML     = '';
+    return;
+  }
+
+  wait.style.display = 'none';
+  hdr.style.display  = 'grid';
+
+  const rh = rowHeight();
+
+  cont.innerHTML = ps.map(p => {
+    const pct  = Math.min(100, (p.distance / target * 100)).toFixed(2);
+    const rc   = p.rank <= 3 ? `rank-${p.rank}` : '';
+    const fc   = p.finished ? 'finished' : '';
+    return `<div class="p-row ${rc} ${fc}" style="height:${rh}px">
+      <div class="rank-num">${p.rank}${p.finished?'<span class="finish-badge">DONE</span>':''}</div>
+      <div class="p-name">${escHtml(p.name)}</div>
+      <div class="dist-label">${Math.round(p.distance)}<span class="unit">m</span></div>
+      <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%"></div></div>
+      <div class="metric"><div class="metric-val">${fmtPace(p.pace)}</div><div class="metric-lbl">/500m</div></div>
+      <div class="metric"><div class="metric-val">${p.watts||'--'}</div><div class="metric-lbl">watts</div></div>
+      <div class="metric"><div class="metric-val">${p.spm||'--'}</div><div class="metric-lbl">spm</div></div>
+      <div class="metric"><div class="metric-val">${fmtTime(p.elapsedTime)}</div><div class="metric-lbl">time</div></div>
+    </div>`;
+  }).join('');
+}
+
+// ── Optional: connect to real Node server via WebSocket ────────────────────
+// If you run `node server.js` on your machine and open localhost:3000,
+// the real ANT+ data will replace the simulation automatically.
+function tryWsConnect() {
+  if (location.protocol === 'file:') return; // opened as local file — skip
+  try {
+    ws = new WebSocket(`ws://${location.host}`);
+    ws.onopen = () => {
+      document.getElementById('ws-dot').className = 'live';
+      document.getElementById('ws-label').textContent = 'ANT+ live';
+      clearInterval(simTimer); // stop simulation, use real data
+    };
+    ws.onmessage = e => {
+      const msg = JSON.parse(e.data);
+      if (msg.type !== 'state') return;
+      const s = msg.data;
+      // Sync server state into local state
+      raceStatus = s.raceStatus;
+      raceStart  = s.raceStartTime;
+      target     = s.targetDistance;
+      participants = s.participants.map(p => ({...p}));
+      renderRows();
+    };
+    ws.onclose = () => {
+      document.getElementById('ws-dot').className = 'demo';
+      document.getElementById('ws-label').textContent = 'demo mode';
+    };
+  } catch(e) {}
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+document.getElementById('name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addAthlete();
+});
+window.addEventListener('resize', () => { if (participants.length) renderRows(); });
+tryWsConnect();
+</script>
+</body>
+</html>
