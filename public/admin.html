@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MOJON COMP ERGS — Admin</title>
+  <style>
+    :root {
+      --bg:     #0d0d18;
+      --panel:  #13131f;
+      --border: #1f1f32;
+      --accent: #00e5ff;
+      --green:  #00e676;
+      --red:    #ff5252;
+      --gold:   #ffd700;
+      --orange: #ff9800;
+      --text:   #e8e8f0;
+      --muted:  #555577;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ───────────────────────────────────────────────────────────── */
+    header {
+      background: #0d0d1c;
+      border-bottom: 2px solid var(--accent);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-size: 1.2rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: var(--accent);
+    }
+    .logo span { color: #fff; }
+    .header-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+      margin-left: 16px;
+      border-bottom: 1px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .header-links a:hover { color: var(--accent); border-color: var(--accent); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1200px;
+    }
+
+    /* ── Panels ───────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .card-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* ── Race Controls ────────────────────────────────────────────────────── */
+    .race-status-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .status-pill {
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .status-idle     { background: #1e1e30; color: var(--muted); }
+    .status-running  { background: rgba(0,230,118,0.15); color: var(--green); border: 1px solid var(--green); }
+    .status-paused   { background: rgba(255,152,0,0.15); color: var(--orange); border: 1px solid var(--orange); }
+    .status-finished { background: rgba(255,215,0,0.15); color: var(--gold); border: 1px solid var(--gold); }
+
+    .timer-display {
+      font-size: 2rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 2px;
+      color: #fff;
+      margin-left: auto;
+    }
+
+    .target-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .target-row label { color: var(--muted); font-size: 0.75rem; letter-spacing: 1px; white-space: nowrap; }
+    .target-row input {
+      flex: 1;
+      background: #0d0d1a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    .target-row input:focus { outline: none; border-color: var(--accent); }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .btn {
+      padding: 11px 14px;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-start  { background: var(--green); color: #000; }
+    .btn-pause  { background: var(--orange); color: #000; }
+    .btn-finish { background: var(--gold); color: #000; }
+    .btn-reset  { background: var(--border); color: var(--muted); }
+
+    /* ── ANT+ Devices ─────────────────────────────────────────────────────── */
+    .ant-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #444; flex-shrink: 0; }
+    .dot.ok   { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .dot.warn { background: var(--orange); }
+
+    .device-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      background: #0d0d1a;
+      border-radius: 7px;
+      margin-bottom: 6px;
+      border: 1px solid var(--border);
+    }
+    .device-id {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--accent);
+      width: 70px;
+    }
+    .device-type {
+      font-size: 0.7rem;
+      color: var(--muted);
+      flex: 1;
+    }
+    .device-age {
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+    .btn-small {
+      padding: 5px 12px;
+      font-size: 0.65rem;
+      border: 1px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      border-radius: 5px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .btn-small:hover { background: rgba(0,229,255,0.1); }
+    .empty-note { font-size: 0.75rem; color: var(--muted); font-style: italic; padding: 6px 0; }
+
+    /* ── Add Participant ──────────────────────────────────────────────────── */
+    .form-group { margin-bottom: 12px; }
+    .form-group label {
+      display: block;
+      font-size: 0.65rem;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      background: #0d0d1a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 7px;
+      font-size: 0.9rem;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none; border-color: var(--accent);
+    }
+    .add-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .btn-add  { background: var(--accent); color: #000; }
+    .btn-demo { background: var(--border); color: var(--text); border: 1px solid #333; }
+
+    /* ── Participant List ─────────────────────────────────────────────────── */
+    .p-item {
+      display: grid;
+      grid-template-columns: 28px 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+      padding: 9px 12px;
+      background: #0d0d1a;
+      border-radius: 7px;
+      margin-bottom: 6px;
+      border: 1px solid var(--border);
+    }
+    .p-rank { font-size: 0.75rem; font-weight: 900; color: var(--muted); text-align: center; }
+    .p-info { min-width: 0; }
+    .p-name-text {
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .p-ant {
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+    .p-ant .linked { color: var(--accent); }
+    .p-metrics {
+      font-size: 0.7rem;
+      color: var(--muted);
+      white-space: nowrap;
+      text-align: right;
+    }
+    .p-metrics strong { color: var(--text); font-variant-numeric: tabular-nums; }
+    .btn-remove {
+      background: none;
+      border: 1px solid #333;
+      color: #555;
+      border-radius: 5px;
+      width: 26px; height: 26px;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      text-align: center;
+      padding: 0;
+    }
+    .btn-remove:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── Error / Success ──────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      background: #1a1a2e;
+      border: 1px solid var(--accent);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 999;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.error { border-color: var(--red); color: var(--red); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">MOJON<span> COMP</span> ERGS — Admin</div>
+  <div class="header-links">
+    <a href="/" target="_blank">Open Dashboard</a>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- LEFT COLUMN -->
+  <div>
+
+    <!-- Race Controls -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">
+        Race Controls
+        <div class="timer-display" id="admin-timer">00:00</div>
+      </div>
+      <div class="race-status-bar">
+        <div class="status-pill status-idle" id="admin-status-pill">IDLE</div>
+      </div>
+      <div class="target-row">
+        <label>Target Distance (m)</label>
+        <input type="number" id="target-input" value="2000" min="100" max="42195" step="100">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-start"  onclick="raceAction('start')">Start Race</button>
+        <button class="btn btn-pause"  onclick="raceAction('pause')">Pause</button>
+        <button class="btn btn-finish" onclick="raceAction('finish')">End Race</button>
+        <button class="btn btn-reset"  onclick="raceAction('reset')">Reset</button>
+      </div>
+    </div>
+
+    <!-- Add Participant -->
+    <div class="card">
+      <div class="card-title">Add Participant</div>
+      <div class="form-group">
+        <label>Athlete Name</label>
+        <input type="text" id="add-name" placeholder="e.g. Alice" maxlength="24" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>ANT+ Device ID (optional — link from detected list below)</label>
+        <input type="text" id="add-antid" placeholder="Leave blank if not using ANT+" autocomplete="off">
+      </div>
+      <div class="add-btns">
+        <button class="btn btn-add" onclick="addParticipant(false)">+ Add (ANT+)</button>
+        <button class="btn btn-demo" onclick="addParticipant(true)">+ Add Demo (simulated)</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div>
+
+    <!-- ANT+ Devices -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">
+        Detected ANT+ Devices
+        <div class="ant-status">
+          <div class="dot" id="ant-dot"></div>
+          <span id="ant-label">checking…</span>
+        </div>
+      </div>
+      <div id="devices-list">
+        <div class="empty-note">No devices detected yet. Make sure ANT+ ergs are powered on.</div>
+      </div>
+    </div>
+
+    <!-- Participants -->
+    <div class="card">
+      <div class="card-title">
+        Registered Participants
+        <span id="p-count" style="font-size:0.7rem;color:var(--muted)">0 / 10</span>
+      </div>
+      <div id="participants-list">
+        <div class="empty-note">No participants added yet.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let _state = null;
+  let _timerInterval = null;
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function fmtTime(secs) {
+    if (!secs || secs < 0) return '00:00';
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function fmtPace(p) {
+    if (!p || p <= 0 || p > 900) return '--:--';
+    const m = Math.floor(p / 60);
+    const s = Math.floor(p % 60);
+    return `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  function secAgo(ts) {
+    if (!ts) return '';
+    const s = Math.round((Date.now() - ts) / 1000);
+    return s < 3 ? 'now' : `${s}s ago`;
+  }
+
+  function toast(msg, isErr = false) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'show' + (isErr ? ' error' : '');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { el.className = ''; }, 3000);
+  }
+
+  function escHtml(str) {
+    return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  function render(s) {
+    _state = s;
+
+    // Status pill
+    const pill = document.getElementById('admin-status-pill');
+    pill.className = `status-pill status-${s.raceStatus}`;
+    pill.textContent = s.raceStatus.toUpperCase();
+
+    // Timer
+    clearInterval(_timerInterval);
+    if (s.raceStatus === 'running' && s.raceStartTime) {
+      _timerInterval = setInterval(() => {
+        const e = (Date.now() - s.raceStartTime) / 1000;
+        document.getElementById('admin-timer').textContent = fmtTime(e);
+      }, 200);
+    } else {
+      const e = s.raceStartTime ? (Date.now() - s.raceStartTime) / 1000 : 0;
+      document.getElementById('admin-timer').textContent = fmtTime(e);
+    }
+
+    // Participant count
+    const ps = s.participants || [];
+    document.getElementById('p-count').textContent = `${ps.length} / 10`;
+
+    // ANT+ devices
+    renderDevices(s.detectedDevices || [], ps);
+
+    // Participants
+    renderParticipants(ps, s.targetDistance);
+
+    // Update target input
+    const ti = document.getElementById('target-input');
+    if (document.activeElement !== ti) ti.value = s.targetDistance;
+  }
+
+  function renderDevices(devices, participants) {
+    const el = document.getElementById('devices-list');
+
+    if (devices.length === 0) {
+      el.innerHTML = '<div class="empty-note">No devices detected yet. Make sure ANT+ ergs are powered on.</div>';
+      return;
+    }
+
+    // Filter out old devices (not seen in 30s)
+    const fresh = devices.filter(d => Date.now() - d.lastSeen < 30000);
+    if (fresh.length === 0) {
+      el.innerHTML = '<div class="empty-note">Devices seen previously but none active right now.</div>';
+      return;
+    }
+
+    const linked = new Set(participants.filter(p => p.antDeviceId).map(p => p.antDeviceId));
+
+    el.innerHTML = fresh.map(d => {
+      const isLinked = linked.has(d.id);
+      return `<div class="device-item">
+        <div class="device-id">#${escHtml(d.id)}</div>
+        <div class="device-type">${escHtml(d.type || 'FE Device')}</div>
+        <div class="device-age">${secAgo(d.lastSeen)}</div>
+        ${isLinked
+          ? '<span style="font-size:0.65rem;color:var(--green);letter-spacing:1px">LINKED</span>'
+          : `<button class="btn-small" onclick="prefillDevice('${escHtml(d.id)}')">Use</button>`
+        }
+      </div>`;
+    }).join('');
+  }
+
+  function renderParticipants(ps, target) {
+    const el = document.getElementById('participants-list');
+
+    if (ps.length === 0) {
+      el.innerHTML = '<div class="empty-note">No participants added yet.</div>';
+      return;
+    }
+
+    el.innerHTML = ps.map(p => {
+      const pct = Math.min(100, ((p.distance || 0) / target * 100)).toFixed(0);
+      return `<div class="p-item">
+        <div class="p-rank">${p.rank}</div>
+        <div class="p-info">
+          <div class="p-name-text">${escHtml(p.name)}</div>
+          <div class="p-ant">
+            ${p.antDeviceId
+              ? `<span class="linked">ANT+ #${escHtml(p.antDeviceId)}</span>`
+              : (p.demo ? '<span>Demo (simulated)</span>' : '<span>No ANT+ device</span>')
+            }
+          </div>
+        </div>
+        <div class="p-metrics">
+          <strong>${Math.round(p.distance || 0)}</strong>m &nbsp;
+          <strong>${fmtPace(p.pace)}</strong>/500 &nbsp;
+          <strong>${p.watts || '--'}</strong>W &nbsp;
+          <strong>${p.spm || '--'}</strong>spm
+          <div style="margin-top:3px;background:#1a1a2e;border-radius:3px;height:4px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px"></div>
+          </div>
+        </div>
+        <button class="btn-remove" title="Remove" onclick="removeParticipant('${escHtml(p.id)}')">✕</button>
+      </div>`;
+    }).join('');
+  }
+
+  // ── ANT+ status ────────────────────────────────────────────────────────────
+
+  async function checkAntStatus() {
+    try {
+      const res = await fetch('/api/ant');
+      const d   = await res.json();
+      const dot = document.getElementById('ant-dot');
+      const lbl = document.getElementById('ant-label');
+      if (d.available) {
+        dot.className = 'dot ok';
+        lbl.textContent = 'ANT+ stick active';
+      } else {
+        dot.className = 'dot warn';
+        lbl.textContent = 'ANT+ stick not detected';
+      }
+    } catch {
+      document.getElementById('ant-label').textContent = 'server unreachable';
+    }
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  async function api(method, path, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(path, opts);
+    return res.json();
+  }
+
+  async function raceAction(action) {
+    const target = Number(document.getElementById('target-input').value) || 2000;
+    const body   = action === 'start' ? { targetDistance: target } : {};
+    const d = await api('POST', `/api/race/${action}`, body);
+    if (d.error) toast(d.error, true);
+  }
+
+  async function addParticipant(demo) {
+    const name    = document.getElementById('add-name').value.trim();
+    const antId   = document.getElementById('add-antid').value.trim() || null;
+
+    if (!name) { toast('Enter a name first', true); return; }
+
+    const d = await api('POST', '/api/participants', { name, antDeviceId: antId, demo });
+    if (d.error) {
+      toast(d.error, true);
+    } else {
+      document.getElementById('add-name').value  = '';
+      document.getElementById('add-antid').value = '';
+      toast(`${name} added`);
+    }
+  }
+
+  async function removeParticipant(id) {
+    const d = await api('DELETE', `/api/participants/${id}`);
+    if (d.error) toast(d.error, true);
+  }
+
+  function prefillDevice(deviceId) {
+    document.getElementById('add-antid').value = deviceId;
+    document.getElementById('add-name').focus();
+    toast(`Device #${deviceId} pre-filled. Enter a name and click Add.`);
+  }
+
+  // ── WebSocket ──────────────────────────────────────────────────────────────
+
+  let _reconnDelay = 1000;
+
+  function connect() {
+    const ws = new WebSocket(`ws://${location.host}`);
+
+    ws.onmessage = e => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'state') render(msg.data);
+    };
+
+    ws.onopen  = () => { _reconnDelay = 1000; };
+    ws.onclose = () => {
+      setTimeout(connect, _reconnDelay);
+      _reconnDelay = Math.min(_reconnDelay * 2, 8000);
+    };
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+
+  // Also poll devices periodically for freshness display
+  setInterval(checkAntStatus, 5000);
+  setInterval(() => {
+    if (_state) renderDevices(_state.detectedDevices || [], _state.participants || []);
+  }, 2000);
+
+  checkAntStatus();
+  connect();
+
+  // Enter key on name field
+  document.getElementById('add-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addParticipant(false);
+  });
+</script>
+</body>
+</html>
