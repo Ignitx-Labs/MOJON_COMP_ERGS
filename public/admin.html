@@ -346,11 +346,13 @@
         <input type="text" id="add-name" placeholder="e.g. Alice" maxlength="24" autocomplete="off">
       </div>
       <div class="form-group">
-        <label>ANT+ Device ID (optional — link from detected list below)</label>
-        <input type="text" id="add-antid" placeholder="Leave blank if not using ANT+" autocomplete="off">
+        <label>ANT+ Erg  <span id="erg-scan-note" style="color:var(--muted);font-weight:400;font-size:0.65rem;letter-spacing:1px">(scanning…)</span></label>
+        <select id="add-antid" style="width:100%">
+          <option value="">— No ANT+ device (demo/manual) —</option>
+        </select>
       </div>
       <div class="add-btns">
-        <button class="btn btn-add" onclick="addParticipant(false)">+ Add (ANT+)</button>
+        <button class="btn btn-add" onclick="addParticipant(false)">+ Add Athlete</button>
         <button class="btn btn-demo" onclick="addParticipant(true)">+ Add Demo (simulated)</button>
       </div>
     </div>
@@ -368,6 +370,21 @@
           <div class="dot" id="ant-dot"></div>
           <span id="ant-label">checking…</span>
         </div>
+      </div>
+      <!-- Windows driver fix banner -->
+      <div id="win-fix-banner" style="display:none;background:#1a0f00;border:1px solid var(--orange);border-radius:8px;padding:14px 16px;margin-bottom:12px;font-size:0.78rem;line-height:1.7">
+        <div style="color:var(--orange);font-weight:700;letter-spacing:1px;margin-bottom:6px">⚠ WINDOWS: Wrong USB driver — ANT+ won't work until fixed</div>
+        <div style="color:#ccc">
+          <strong style="color:#fff">One-time fix (takes 2 min):</strong><br>
+          1. Download &amp; open <a href="https://zadig.akeo.ie" target="_blank" style="color:var(--accent)">Zadig</a> (free tool)<br>
+          2. Plug in your ANT+ USB stick<br>
+          3. In Zadig: <strong>Options → List All Devices</strong><br>
+          4. Select <strong>"ANT USB Stick 2"</strong> (or ANT USB Stick / Dynastream)<br>
+          5. Set driver to <strong>WinUSB</strong> → click <strong>"Replace Driver"</strong><br>
+          6. Close Zadig, then re-run cmd as <strong>Administrator</strong>:<br>
+          &nbsp;&nbsp;&nbsp;<code style="color:var(--accent);background:#0d0d1a;padding:2px 6px;border-radius:3px">node server.js</code>
+        </div>
+        <div id="win-usb-found" style="display:none;margin-top:8px;color:var(--green);font-size:0.72rem"></div>
       </div>
       <div id="devices-list">
         <div class="empty-note">No devices detected yet. Make sure ANT+ ergs are powered on.</div>
@@ -491,10 +508,13 @@
         <div class="device-age">${secAgo(d.lastSeen)}</div>
         ${isLinked
           ? '<span style="font-size:0.65rem;color:var(--green);letter-spacing:1px">LINKED</span>'
-          : `<button class="btn-small" onclick="prefillDevice('${escHtml(d.id)}')">Use</button>`
+          : '<span style="font-size:0.65rem;color:var(--accent);letter-spacing:1px">AVAILABLE</span>'
         }
       </div>`;
     }).join('');
+
+    // Also update the dropdown in the Add Participant form
+    updateDeviceDropdown(fresh, linked);
   }
 
   function renderParticipants(ps, target) {
@@ -538,14 +558,26 @@
     try {
       const res = await fetch('/api/ant');
       const d   = await res.json();
-      const dot = document.getElementById('ant-dot');
-      const lbl = document.getElementById('ant-label');
+      const dot    = document.getElementById('ant-dot');
+      const lbl    = document.getElementById('ant-label');
+      const banner = document.getElementById('win-fix-banner');
+      const usbMsg = document.getElementById('win-usb-found');
+
       if (d.available) {
-        dot.className = 'dot ok';
-        lbl.textContent = 'ANT+ stick active';
+        dot.className   = 'dot ok';
+        lbl.textContent = 'ANT+ stick active — scanning';
+        banner.style.display = 'none';
       } else {
-        dot.className = 'dot warn';
-        lbl.textContent = 'ANT+ stick not detected';
+        dot.className   = 'dot warn';
+        lbl.textContent = 'ANT+ stick not accessible';
+        // Show Windows fix banner on Windows (or when USB stick found but driver wrong)
+        if (d.platform === 'win32' || d.usbFound) {
+          banner.style.display = 'block';
+          if (d.usbFound) {
+            usbMsg.style.display  = 'block';
+            usbMsg.textContent    = `✓ Good news: ANT+ stick IS detected by USB (PID ${d.usbPid}) — just needs WinUSB driver via Zadig above.`;
+          }
+        }
       }
     } catch {
       document.getElementById('ant-label').textContent = 'server unreachable';
@@ -568,9 +600,36 @@
     if (d.error) toast(d.error, true);
   }
 
+  function updateDeviceDropdown(freshDevices, linkedSet) {
+    const sel  = document.getElementById('add-antid');
+    const note = document.getElementById('erg-scan-note');
+    const prev = sel.value;
+
+    // Rebuild options
+    sel.innerHTML = '<option value="">— No ANT+ device (demo/manual) —</option>';
+    freshDevices.forEach(d => {
+      const isLinked = linkedSet.has(d.id);
+      const opt      = document.createElement('option');
+      opt.value      = d.id;
+      opt.textContent = `#${d.id}  ${d.type || 'FE Device'}${isLinked ? '  [already linked]' : ''}`;
+      if (isLinked) opt.style.color = '#555';
+      sel.appendChild(opt);
+    });
+
+    // Restore previous selection if still valid
+    if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+
+    const n = freshDevices.length;
+    note.textContent = n > 0
+      ? `${n} erg${n>1?'s':''} detected`
+      : '(scanning — power on ergs)';
+    note.style.color = n > 0 ? 'var(--green)' : 'var(--muted)';
+  }
+
   async function addParticipant(demo) {
-    const name    = document.getElementById('add-name').value.trim();
-    const antId   = document.getElementById('add-antid').value.trim() || null;
+    const name  = document.getElementById('add-name').value.trim();
+    const sel   = document.getElementById('add-antid');
+    const antId = (demo ? null : sel.value) || null;
 
     if (!name) { toast('Enter a name first', true); return; }
 
@@ -578,21 +637,15 @@
     if (d.error) {
       toast(d.error, true);
     } else {
-      document.getElementById('add-name').value  = '';
-      document.getElementById('add-antid').value = '';
-      toast(`${name} added`);
+      document.getElementById('add-name').value = '';
+      sel.value = '';
+      toast(`${name} added${antId ? ` → ANT+ #${antId}` : ' (demo)'}`);
     }
   }
 
   async function removeParticipant(id) {
     const d = await api('DELETE', `/api/participants/${id}`);
     if (d.error) toast(d.error, true);
-  }
-
-  function prefillDevice(deviceId) {
-    document.getElementById('add-antid').value = deviceId;
-    document.getElementById('add-name').focus();
-    toast(`Device #${deviceId} pre-filled. Enter a name and click Add.`);
   }
 
   // ── WebSocket ──────────────────────────────────────────────────────────────

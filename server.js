@@ -118,20 +118,71 @@ function initAnt() {
   try {
     Ant = require('ant-plus');
   } catch (e) {
-    console.warn('[ANT+] ant-plus not found – running without ANT+. Install with: npm install');
+    console.warn('[ANT+] ant-plus not found – run: npm install');
     return;
   }
 
-  const stick = new Ant.GarminStick2();
+  // Try to list USB devices to give a helpful diagnosis
+  let usbDiag = '';
+  try {
+    const usb = require('usb');
+    const devices = usb.getDeviceList();
+    const ant = devices.find(d =>
+      d.deviceDescriptor.idVendor === 0x0FCF
+    );
+    if (ant) {
+      usbDiag = `  USB: ANT+ stick found (PID 0x${ant.deviceDescriptor.idProduct.toString(16).toUpperCase()}) but driver wrong.`;
+    } else {
+      usbDiag = '  USB: No ANT+ stick detected (VID 0x0FCF not found). Check USB connection.';
+    }
+  } catch (e) { /* usb module not directly accessible */ }
+
+  // Try both Stick2 (most common) and Stick3
+  let stick = new Ant.GarminStick2();
+  let opened = stick.open();
+
+  if (!opened) {
+    // Try Stick3
+    stick = new Ant.GarminStick3();
+    opened = stick.open();
+  }
+
+  if (!opened) {
+    console.warn('');
+    console.warn('  ╔══════════════════════════════════════════════════════════════╗');
+    console.warn('  ║  ANT+ USB STICK NOT ACCESSIBLE                               ║');
+    console.warn('  ╠══════════════════════════════════════════════════════════════╣');
+    if (usbDiag) console.warn(`  ║  ${usbDiag.padEnd(61)}║`);
+    console.warn('  ║                                                              ║');
+    console.warn('  ║  WINDOWS FIX (required once):                               ║');
+    console.warn('  ║  1. Download Zadig: https://zadig.akeo.ie                    ║');
+    console.warn('  ║  2. Plug in your ANT+ USB stick                              ║');
+    console.warn('  ║  3. In Zadig: Options → List All Devices                     ║');
+    console.warn('  ║  4. Select "ANT USB Stick 2" (or similar ANT device)         ║');
+    console.warn('  ║  5. Choose driver: WinUSB  → click "Replace Driver"          ║');
+    console.warn('  ║  6. Restart this server as Administrator:                    ║');
+    console.warn('  ║     Right-click cmd.exe → Run as administrator               ║');
+    console.warn('  ║     then: node server.js                                     ║');
+    console.warn('  ║                                                              ║');
+    console.warn('  ║  The app still works — use Admin panel → Add Demo rowers     ║');
+    console.warn('  ╚══════════════════════════════════════════════════════════════╝');
+    console.warn('');
+    return;
+  }
 
   stick.on('startup', () => {
-    console.log('[ANT+] Stick ready – scanning for FE-C devices (rowers, bikes, etc.)');
+    console.log('[ANT+] ✓ Stick ready — scanning for FE-C devices (PM5, Bike, etc.)');
     antAvailable = true;
+    broadcastState();
 
     const scanner = new Ant.FitnessEquipmentScanner(stick);
-
-    scanner.on('fitnessData', updateFromAnt);
-
+    scanner.on('fitnessData', (data) => {
+      // Log first detection of each device so user can see it in console
+      if (!state.detectedDevices[String(data.DeviceID)]) {
+        console.log(`[ANT+] New device detected: ID=${data.DeviceID} Type=${data.EquipmentType || 'FE'}`);
+      }
+      updateFromAnt(data);
+    });
     scanner.scan();
   });
 
@@ -140,12 +191,6 @@ function initAnt() {
     antAvailable = false;
     broadcastState();
   });
-
-  if (!stick.open()) {
-    console.warn('[ANT+] Could not open USB stick.');
-    console.warn('       On Linux, try: sudo node server.js');
-    console.warn('       Or add udev rule: SUBSYSTEM=="usb", ATTRS{idVendor}=="0fcf", MODE="0666"');
-  }
 }
 
 // ── Demo / simulation mode ────────────────────────────────────────────────────
@@ -286,7 +331,17 @@ app.post('/api/race/reset', (req, res) => {
 app.get('/api/state', (req, res) => res.json(getPublicState()));
 
 // ANT+ status
-app.get('/api/ant', (req, res) => res.json({ available: antAvailable }));
+app.get('/api/ant', (req, res) => {
+  let usbFound = false;
+  let usbPid   = null;
+  try {
+    const usb     = require('usb');
+    const devices = usb.getDeviceList();
+    const ant     = devices.find(d => d.deviceDescriptor.idVendor === 0x0FCF);
+    if (ant) { usbFound = true; usbPid = `0x${ant.deviceDescriptor.idProduct.toString(16).toUpperCase()}`; }
+  } catch (e) {}
+  res.json({ available: antAvailable, usbFound, usbPid, platform: process.platform });
+});
 
 // ── WebSocket ─────────────────────────────────────────────────────────────────
 
