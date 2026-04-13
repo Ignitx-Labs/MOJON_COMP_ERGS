@@ -17,11 +17,18 @@ app.use(express.json());
 const MAX_PARTICIPANTS = 10;
 
 const state = {
-  raceStatus:     'idle',   // idle | running | paused | finished
+  raceStatus:     'idle',
   raceStartTime:  null,
-  targetDistance: 2000,     // metres
-  participants:   {},       // id → participant
-  detectedDevices: {},      // antId → { id, type, lastSeen }
+  targetDistance: 2000,
+  participants:   {},
+  detectedDevices: {},
+};
+
+// ANT+ scan diagnostics — visible in admin panel
+const antDiag = {
+  scanStarted:   null,
+  messagesTotal: 0,
+  lastMessage:   null,
 };
 
 function makeParticipant(id, name, antDeviceId = null) {
@@ -171,19 +178,45 @@ function initAnt() {
   }
 
   stick.on('startup', () => {
-    console.log('[ANT+] ✓ Stick ready — scanning for FE-C devices (PM5, Bike, etc.)');
+    console.log('[ANT+] ✓ Stick ready — scanning for FE-C devices (PM5, SkiErg, Bike, etc.)');
+    console.log('[ANT+]   Make sure the PM5 is on a WORKOUT screen and pull the cord to activate.');
     antAvailable = true;
+    antDiag.scanStarted = Date.now();
     broadcastState();
 
     const scanner = new Ant.FitnessEquipmentScanner(stick);
+
     scanner.on('fitnessData', (data) => {
-      // Log first detection of each device so user can see it in console
-      if (!state.detectedDevices[String(data.DeviceID)]) {
-        console.log(`[ANT+] New device detected: ID=${data.DeviceID} Type=${data.EquipmentType || 'FE'}`);
+      antDiag.messagesTotal++;
+      antDiag.lastMessage = Date.now();
+
+      const id = String(data.DeviceID);
+      if (!state.detectedDevices[id]) {
+        console.log(`[ANT+] ✓ NEW device found! ID=${data.DeviceID}  Type=${data.EquipmentType || 'FE'}`);
+      }
+      // Broadcast scan counter every 50 messages so admin panel shows activity
+      if (antDiag.messagesTotal % 50 === 1) {
+        broadcast({ type: 'antDiag', diag: { ...antDiag, deviceCount: Object.keys(state.detectedDevices).length } });
       }
       updateFromAnt(data);
     });
+
     scanner.scan();
+
+    // Heartbeat: log to console every 15s if nothing detected yet
+    const heartbeat = setInterval(() => {
+      if (!antAvailable) { clearInterval(heartbeat); return; }
+      const elapsed = Math.round((Date.now() - antDiag.scanStarted) / 1000);
+      const devCount = Object.keys(state.detectedDevices).length;
+      if (devCount === 0) {
+        console.log(`[ANT+] Still scanning… ${elapsed}s elapsed, 0 devices. ` +
+          `Msgs received: ${antDiag.messagesTotal}. ` +
+          `Is PM5 on workout screen? Did you pull the cord?`);
+      } else {
+        console.log(`[ANT+] Scanning… ${devCount} device(s) active. Total msgs: ${antDiag.messagesTotal}`);
+        clearInterval(heartbeat);
+      }
+    }, 15000);
   });
 
   stick.on('shutdown', () => {
@@ -340,7 +373,14 @@ app.get('/api/ant', (req, res) => {
     const ant     = devices.find(d => d.deviceDescriptor.idVendor === 0x0FCF);
     if (ant) { usbFound = true; usbPid = `0x${ant.deviceDescriptor.idProduct.toString(16).toUpperCase()}`; }
   } catch (e) {}
-  res.json({ available: antAvailable, usbFound, usbPid, platform: process.platform });
+  const elapsed = antDiag.scanStarted ? Math.round((Date.now() - antDiag.scanStarted) / 1000) : 0;
+  res.json({
+    available: antAvailable, usbFound, usbPid, platform: process.platform,
+    scanElapsed: elapsed,
+    messagesTotal: antDiag.messagesTotal,
+    lastMessageAgo: antDiag.lastMessage ? Math.round((Date.now() - antDiag.lastMessage) / 1000) : null,
+    devicesDetected: Object.keys(state.detectedDevices).length,
+  });
 });
 
 // ── WebSocket ─────────────────────────────────────────────────────────────────
