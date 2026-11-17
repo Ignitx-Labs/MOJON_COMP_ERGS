@@ -153,4 +153,4 @@ MOJON_COMP_ERGS/
 
 MIT — see [LICENSE](LICENSE).
 
-Built by **Ignite Strategies LLC** · [Ignitx Labs](https://github.com/Ignitx-Labs)
+Built by **Luca Spinelli** · [Ignitx Labs](https://github.com/Ignitx-Labs)
