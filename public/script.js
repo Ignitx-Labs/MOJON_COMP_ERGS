@@ -79,15 +79,25 @@ async function init() {
   // Camera + model init in parallel
   try {
     await setupCamera();
+  } catch (err) {
+    console.error("❌ Camera error:", err);
+    setSetupMessage("Camera access denied. Please allow camera permissions and reload.");
+    return;
+  }
+
+  try {
     setSetupMessage("Loading MOJON AI model…");
 
     const vision = await FilesetResolver.forVisionTasks(
       "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
     );
 
+    // Try local model first (for self-hosted installs), fall back to CDN
+    const modelPath = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task";
+
     detector = await PoseLandmarker.createFromOptions(vision, {
       baseOptions: {
-        modelAssetPath: "./models/pose_landmarker_full.task",
+        modelAssetPath: modelPath,
         delegate: "GPU"
       },
       runningMode: "VIDEO",
@@ -111,7 +121,7 @@ async function init() {
 
   } catch (err) {
     console.error("❌ MediaPipe initialization failed:", err);
-    setSetupMessage("Camera access denied. Please allow camera permissions and reload.");
+    setSetupMessage("Failed to load AI model. Check your connection and reload.");
   }
 }
 
