@@ -9,6 +9,7 @@ import { isValid } from './utils.js';
 // horizontal body position.
 
 let holdStart = null;
+let holdRep = -1; // which rep the timer is for — resets on new workout
 const HOLD_MS = 5000;
 
 export function detector(pose, rep, phase) {
@@ -37,6 +38,7 @@ export function detector(pose, rep, phase) {
 
   if (!inPlank) {
     holdStart = null;
+    holdRep = -1;
     return {
       phase, counted: false,
       cue: onFloor ? "Keep hips level!" : "Lower your body to the floor"
@@ -44,13 +46,14 @@ export function detector(pose, rep, phase) {
   }
 
   const now = performance.now();
-  if (!holdStart) holdStart = now;
+  if (holdRep !== rep) { holdStart = now; holdRep = rep; }
 
   const held   = now - holdStart;
   const remain = Math.ceil((HOLD_MS - held) / 1000);
 
   if (held >= HOLD_MS) {
     holdStart = now;
+    holdRep = rep + 1;
     return { phase: 'up', counted: true, cue: "Rep done! Stay tight!" };
   }
 

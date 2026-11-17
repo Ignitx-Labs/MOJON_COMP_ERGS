@@ -23,7 +23,7 @@ export function detector(pose, rep, phase) {
   const leftTap = Math.abs(lw.x - rs.x) < 0.1 && Math.abs(lw.y - rs.y) < 0.1;
   const rightTap = Math.abs(rw.x - ls.x) < 0.1 && Math.abs(rw.y - ls.y) < 0.1;
 
-  const hipsStable = Math.abs(lh.y - rh.y) < 0.05 && Math.abs(lh.x - rh.x) < 0.05;
+  const hipsStable = Math.abs(lh.y - rh.y) < 0.05;
 
   const tapDetected = (leftTap || rightTap) && hipsStable;
 

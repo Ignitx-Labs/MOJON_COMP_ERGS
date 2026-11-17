@@ -86,7 +86,7 @@ async function init() {
   }
 
   try {
-    setSetupMessage("Loading MOJON AI model…");
+    setSetupMessage("Downloading AI model (~9 MB)…");
 
     const vision = await FilesetResolver.forVisionTasks(
       "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"

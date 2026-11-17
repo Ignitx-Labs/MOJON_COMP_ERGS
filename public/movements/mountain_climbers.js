@@ -6,8 +6,8 @@ import { isValid, angleBetween3D } from './utils.js';
 export function detector(pose, rep, phase) {
   const kp = pose.keypoints ?? pose;
 
-  const leftKneeForward = isValid(kp[25]) && isValid(kp[11]) && kp[25].y < kp[11].y;
-  const rightKneeForward = isValid(kp[26]) && isValid(kp[12]) && kp[26].y < kp[12].y;
+  const leftKneeForward = isValid(kp[25]) && isValid(kp[23]) && kp[25].y < kp[23].y;
+  const rightKneeForward = isValid(kp[26]) && isValid(kp[24]) && kp[26].y < kp[24].y;
 
   const alternating = (rep % 2 === 0 && leftKneeForward) || (rep % 2 === 1 && rightKneeForward);
 

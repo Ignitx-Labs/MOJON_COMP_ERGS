@@ -7,6 +7,7 @@ import { isValid, angleBetween3D } from './utils.js';
 // Module-level timer so it persists across detector calls.
 
 let holdStart = null;
+let holdRep = -1;
 const HOLD_MS = 5000;
 
 export function detector(pose, rep, phase) {
@@ -32,17 +33,19 @@ export function detector(pose, rep, phase) {
 
   if (!inPosition) {
     holdStart = null;
+    holdRep = -1;
     return { phase, counted: false, cue: "Bend knees to 90° and hold" };
   }
 
   const now = performance.now();
-  if (!holdStart) holdStart = now;
+  if (holdRep !== rep) { holdStart = now; holdRep = rep; }
 
   const held    = now - holdStart;
   const remain  = Math.ceil((HOLD_MS - held) / 1000);
 
   if (held >= HOLD_MS) {
-    holdStart = now; // reset for next rep
+    holdStart = now;
+    holdRep = rep + 1;
     return { phase: 'up', counted: true, cue: "Rep done! Keep holding!" };
   }
 
