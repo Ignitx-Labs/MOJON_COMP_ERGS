@@ -1,1 +1,5 @@
 node_modules/
+public/models/
+.DS_Store
+Thumbs.db
+*.log

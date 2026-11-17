@@ -1,0 +1,1376 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700&display=swap');
+
+/* RESET + BASE */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+.hidden {
+  display: none !important;
+}
+body {
+  font-family: 'Manrope', sans-serif;
+  background-color: #0d0d0d;
+  color: #f5f5f5;
+  height: 100vh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── GLOBAL TOUCH IMPROVEMENTS ───────────────────────────────── */
+button, [role="button"], label[class*="pill"], label[class*="card"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+button:active {
+  opacity: 0.82;
+}
+.btn-start:active,
+.btn-again:active,
+.btn-scan-ready:active,
+.btn-scan-start:active {
+  opacity: 1;
+  transform: scale(0.97);
+}
+.modality-card:active {
+  transform: scale(0.97);
+}
+.ex-pill:active {
+  background: #1c1c1c;
+}
+
+/* ── SCREENS ─────────────────────────────────────────────────── */
+.screen {
+  position: fixed;
+  inset: 0;
+}
+.screen.hidden {
+  display: none;
+}
+
+/* ── SCREEN 1: SETUP ─────────────────────────────────────────── */
+#screen-setup {
+  overflow-y: auto;
+  background: #0d0d0d;
+  background-image: radial-gradient(ellipse 90% 50% at 50% -5%, #0c2a20 0%, #0d0d0d 60%);
+}
+
+/* Init loading overlay */
+.setup-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(13, 13, 13, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+}
+.setup-loading.hidden {
+  display: none;
+}
+#setup-message {
+  color: #00ffc2;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Setup page content */
+.setup-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 28px 20px max(60px, calc(env(safe-area-inset-bottom) + 32px));
+  padding-left:  max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Header */
+.setup-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1a1a1a;
+}
+.logo {
+  width: 64px;
+  flex-shrink: 0;
+}
+.tagline {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #00ffc2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.credits {
+  font-size: 0.68rem;
+  color: #444;
+  margin-top: 5px;
+}
+
+/* Header utility buttons (History + Scan — always visible) */
+.setup-header {
+  flex-wrap: wrap;
+}
+.header-text {
+  flex: 1;
+}
+.header-utils {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.util-btn {
+  background: transparent;
+  border: 1.5px solid #222;
+  border-radius: 10px;
+  color: #555;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 7px 11px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.util-btn:hover {
+  border-color: #333;
+  color: #aaa;
+  background: #141414;
+}
+
+/* Section labels */
+.setup-section h3 {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 14px;
+}
+
+/* ── MODALITY CARDS ──────────────────────────────────────────── */
+.modality-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.modality-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #141414;
+  border: 1.5px solid #222;
+  border-radius: 16px;
+  padding: 20px 12px 18px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+  font-family: 'Manrope', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+.modality-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: radial-gradient(ellipse at 50% 0%, #00ffc210 0%, transparent 65%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.modality-card:hover {
+  border-color: #333;
+  background: #191919;
+  transform: translateY(-1px);
+}
+.modality-card:hover::after {
+  opacity: 1;
+}
+.modality-card.selected {
+  border-color: #00ffc2;
+  background: linear-gradient(160deg, #031a13 0%, #0a1f18 100%);
+}
+.modality-card.selected::after {
+  opacity: 1;
+  background: radial-gradient(ellipse at 50% 0%, #00ffc228 0%, transparent 70%);
+}
+.modality-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.modality-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  margin-bottom: 2px;
+  filter: grayscale(0.4);
+  transition: filter 0.2s;
+}
+.modality-card.selected .modality-icon {
+  filter: grayscale(0);
+}
+.modality-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #555;
+  letter-spacing: 0.06em;
+  transition: color 0.2s;
+}
+.modality-card.selected .modality-name {
+  color: #00ffc2;
+}
+.modality-sub {
+  font-size: 0.64rem;
+  color: #444;
+  line-height: 1.4;
+  transition: color 0.2s;
+}
+.modality-card.selected .modality-sub {
+  color: #00ffc270;
+}
+
+/* ── EXERCISE PILLS ──────────────────────────────────────────── */
+.movement-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ex-pill {
+  display: flex;
+  align-items: center;
+  background: #141414;
+  border: 1.5px solid #1e1e1e;
+  border-radius: 12px;
+  padding: 11px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+  gap: 8px;
+  min-height: 46px;
+}
+.ex-pill:hover {
+  border-color: #2e2e2e;
+  background: #181818;
+}
+.ex-pill:has(input[type="checkbox"]:checked) {
+  border-color: #00ffc2;
+  background: linear-gradient(135deg, #021a12 0%, #0a1c16 100%);
+}
+/* Hidden native checkbox */
+.ex-pill input[type="checkbox"] {
+  display: none;
+}
+.ex-pill-name {
+  flex: 1;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #555;
+  transition: color 0.15s;
+  line-height: 1.2;
+}
+.ex-pill:has(input[type="checkbox"]:checked) .ex-pill-name {
+  color: #e8e8e8;
+}
+/* +/− counter — hidden until checked */
+.ex-pill-counter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+.ex-pill:has(input[type="checkbox"]:checked) .ex-pill-counter {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+.reps-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #00ffc250;
+  background: transparent;
+  color: #00ffc2;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: 'Manrope', sans-serif;
+  transition: background 0.15s;
+}
+.reps-btn:hover {
+  background: #00ffc218;
+}
+.ex-reps {
+  width: 28px;
+  background: transparent;
+  border: none;
+  color: #00ffc2;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+  font-family: 'Manrope', sans-serif;
+  -moz-appearance: textfield;
+  outline: none;
+}
+.ex-reps::-webkit-outer-spin-button,
+.ex-reps::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+/* Sequence badge on exercise pills */
+.ex-seq {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #00ffc2;
+  color: #001a12;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  margin-right: 2px;
+}
+.ex-pill:has(input[type="checkbox"]:checked) .ex-seq {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ── SETUP FOOTER ────────────────────────────────────────────── */
+.setup-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.setup-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #141414;
+  border: 1.5px solid #1e1e1e;
+  border-radius: 16px;
+  padding: 12px 16px;
+}
+.rounds-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #555;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rounds-label input[type="number"] {
+  width: 52px;
+  background: #0d0d0d;
+  color: #f5f5f5;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: 'Manrope', sans-serif;
+  text-align: center;
+}
+.btn-start {
+  flex: 1;
+  background: linear-gradient(110deg, #00ffc2 0%, #00e5b0 100%);
+  color: #001a12;
+  border: none;
+  border-radius: 10px;
+  padding: 13px 20px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: opacity 0.2s, transform 0.15s;
+  box-shadow: 0 4px 24px #00ffc228;
+}
+.btn-start:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.btn-start:active {
+  transform: translateY(0);
+}
+.btn-start:disabled {
+  background: #1e1e1e;
+  color: #444;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+.setup-secondary {
+  display: flex;
+  gap: 8px;
+}
+.setup-secondary button {
+  flex: 1;
+  background: transparent;
+  border: 1.5px solid #1e1e1e;
+  border-radius: 10px;
+  color: #555;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.setup-secondary button:hover {
+  border-color: #333;
+  color: #aaa;
+  background: #141414;
+}
+
+/* ── SCREEN 2: ACTIVE WORKOUT ────────────────────────────────── */
+#screen-workout {
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+#screen-workout.hidden {
+  display: none;
+}
+
+/* Top bar */
+.workout-topbar {
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: #0d0d0d;
+  border-bottom: 1px solid #1a1a1a;
+}
+.workout-topbar p {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #00ffc2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55%;
+}
+.topbar-right {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+/* Camera area fills remaining space */
+.camera-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+video, canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+canvas {
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Bottom bar */
+.workout-bottombar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  padding-bottom: env(safe-area-inset-bottom);
+  min-height: calc(58px + env(safe-area-inset-bottom));
+  background: #0d0d0d;
+  border-top: 1px solid #1a1a1a;
+  gap: 12px;
+}
+.timer {
+  font-family: monospace;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #ffffffcc;
+  min-width: 72px;
+}
+.round-stats {
+  flex: 1;
+  font-size: 0.75rem;
+  color: #666;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.btn-stop {
+  background: #ff4466;
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+.btn-stop:hover {
+  opacity: 0.85;
+}
+
+/* ── COACHING CUE ────────────────────────────────────────────── */
+.cue-display {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  background: rgba(0, 0, 0, 0.65);
+  color: #00ffc2;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 6px 20px;
+  border-radius: 999px;
+  border: 1px solid #00ffc240;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.cue-display.hidden {
+  display: none;
+}
+
+/* ── WORKOUT PRESCRIPTION PANEL ─────────────────────────────── */
+.workout-panel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 4;
+  width: 168px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid #00ffc230;
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.workout-panel.hidden {
+  display: none;
+}
+.wp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid #ffffff12;
+}
+#wp-modality {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #00ffc2;
+  letter-spacing: 0.08em;
+}
+#wp-config {
+  font-size: 0.68rem;
+  color: #888;
+}
+.wp-movements {
+  list-style: none;
+  padding: 6px 0;
+  margin: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.wp-movements li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 0.72rem;
+  color: #666;
+  transition: color 0.15s, background 0.15s;
+  line-height: 1.3;
+}
+.wp-movements li .wp-reps {
+  font-weight: 700;
+  color: #444;
+  min-width: 26px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.wp-movements li.wp-current {
+  color: #f5f5f5;
+  background: rgba(0, 255, 194, 0.08);
+}
+.wp-movements li.wp-current .wp-reps {
+  color: #00ffc2;
+}
+.wp-movements li.wp-done {
+  color: #333;
+  text-decoration: line-through;
+}
+.wp-movements li.wp-done .wp-reps {
+  color: #333;
+}
+
+/* ── HISTORY PANEL ───────────────────────────────────────────── */
+.history-panel {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.history-panel.hidden {
+  display: none;
+}
+.history-panel-inner {
+  background: #111;
+  border: 1px solid #00ffc2;
+  border-radius: 16px;
+  width: min(560px, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 0 40px #00ffc240;
+}
+.history-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #222;
+}
+.history-panel-header h3 {
+  font-size: 1rem;
+  color: #00ffc2;
+}
+.close-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.close-btn:hover {
+  background: #222;
+  color: white;
+}
+.history-content {
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hist-session {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.hist-date {
+  font-size: 0.8rem;
+  color: #00ffc2;
+  font-weight: 700;
+}
+.hist-meta {
+  font-size: 0.75rem;
+  color: #888;
+}
+.hist-exercises {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hist-tag {
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  color: #ccc;
+}
+.hist-tag strong {
+  color: #00ff88;
+}
+.hist-rounds {
+  font-size: 0.7rem;
+  color: #555;
+}
+.history-empty {
+  color: #555;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 24px 0;
+}
+
+/* ── SCREEN 3: POST-WORKOUT STATS ───────────────────────────── */
+#screen-stats {
+  overflow-y: auto;
+  background: #0d0d0d;
+  background-image: radial-gradient(ellipse 90% 40% at 50% 0%, #0c2a20 0%, #0d0d0d 55%);
+}
+.stats-page {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 40px 20px max(60px, calc(env(safe-area-inset-bottom) + 32px));
+  padding-left:  max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Hero: check + modality */
+.stats-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+.stats-check {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00ffc2, #00e5b0);
+  color: #001a12;
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 40px #00ffc240;
+}
+.stats-modality-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #555;
+  background: #141414;
+  border: 1.5px solid #222;
+  border-radius: 999px;
+  padding: 5px 16px;
+}
+
+/* Key metrics grid */
+.stats-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.stats-metric-card {
+  background: #141414;
+  border: 1.5px solid #1e1e1e;
+  border-radius: 16px;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.stats-metric-value {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #00ffc2;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.stats-metric-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #444;
+}
+
+/* Section blocks */
+.stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.stats-section-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #444;
+}
+
+/* Circuit list */
+.stats-circuit {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stats-circuit li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #141414;
+  border: 1.5px solid #1e1e1e;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.sc-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #00ffc218;
+  border: 1px solid #00ffc240;
+  color: #00ffc2;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sc-name {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ccc;
+}
+.sc-reps {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #00ffc2;
+}
+
+/* Round breakdown */
+.stats-rounds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sr-label {
+  font-size: 0.72rem;
+  color: #555;
+  width: 56px;
+  flex-shrink: 0;
+}
+.sr-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: #1a1a1a;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.sr-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #00ffc2, #00e5b0);
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+.sr-time {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #888;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Action buttons */
+.stats-actions {
+  display: flex;
+  gap: 10px;
+}
+.btn-again {
+  flex: 1;
+  background: linear-gradient(110deg, #00ffc2 0%, #00e5b0 100%);
+  color: #001a12;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: opacity 0.2s, transform 0.15s;
+  box-shadow: 0 4px 24px #00ffc228;
+}
+.btn-again:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.btn-stats-home {
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1.5px solid #1e1e1e;
+  border-radius: 12px;
+  color: #555;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-stats-home:hover {
+  border-color: #333;
+  color: #aaa;
+}
+
+/* ── SCREEN: BODY SCAN ───────────────────────────────────────── */
+#screen-scan { background: #000; }
+
+#scan-host {
+  width: 100%;
+  height: 100%;
+}
+
+.scan-screen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
+.scan-camera-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  min-height: 0;
+}
+
+.scan-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.scan-hint {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  border: 1px solid #2a2a2a;
+  border-radius: 20px;
+  padding: 7px 18px;
+  color: #aaa;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.scan-big-count {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 7rem;
+  font-weight: 700;
+  color: #00ffc2;
+  text-shadow: 0 0 60px rgba(0,255,194,0.6);
+  pointer-events: none;
+  line-height: 1;
+}
+
+.scan-step-bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.scan-step-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.35);
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: background 0.2s, color 0.2s;
+}
+
+.scan-step-pill.done {
+  background: rgba(0,220,130,0.15);
+  color: #00dc82;
+  border-color: rgba(0,220,130,0.3);
+}
+
+.scan-step-pill.active {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  border-color: rgba(255,255,255,0.35);
+}
+
+.scan-footer {
+  flex-shrink: 0;
+  padding: 12px 16px max(16px, calc(env(safe-area-inset-bottom) + 10px));
+  background: #0d0d0d;
+  border-top: 1px solid #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scan-status-text {
+  font-size: 0.78rem;
+  color: #555;
+  text-align: center;
+  margin: 0;
+}
+
+.scan-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.scan-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.scan-metric-chip {
+  background: #141414;
+  border: 1px solid #1e1e1e;
+  border-radius: 10px;
+  padding: 10px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.scan-metric-chip-val {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #00ffc2;
+  line-height: 1;
+}
+
+.scan-metric-chip-highlight {
+  color: #fff;
+  font-size: 1.15rem;
+}
+
+.scan-metric-chip-lbl {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #444;
+  text-align: center;
+}
+
+/* ── Scan form overlay ───────────────────────────────────────── */
+.scan-form-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 28px 24px;
+  background: linear-gradient(160deg, #0d1f18 0%, #0a0a0a 100%);
+  z-index: 10;
+}
+.scan-form-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #f5f5f5;
+  text-align: center;
+  margin: 0;
+}
+.scan-form-sub {
+  font-size: 0.85rem;
+  color: #666;
+  text-align: center;
+  margin: -12px 0 0;
+}
+.scan-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 380px;
+}
+.scan-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.scan-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #555;
+}
+.scan-input, .scan-select {
+  background: #141414;
+  border: 1.5px solid #222;
+  border-radius: 10px;
+  color: #f0f0f0;
+  font-family: 'Manrope', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 10px 12px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.scan-input:focus, .scan-select:focus { border-color: #00ffc2; }
+.scan-select option { background: #1a1a1a; }
+.btn-scan-ready {
+  width: 100%;
+  max-width: 380px;
+  background: linear-gradient(110deg, #00ffc2 0%, #00e5b0 100%);
+  color: #001a12;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  box-shadow: 0 4px 24px #00ffc228;
+}
+.btn-scan-ready:hover { opacity: 0.9; }
+
+.btn-scan-start {
+  flex: 1;
+  background: linear-gradient(110deg, #00ffc2 0%, #00e5b0 100%);
+  color: #001a12;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  box-shadow: 0 4px 20px #00ffc222;
+}
+.btn-scan-start:hover { opacity: 0.9; }
+.btn-scan-start:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-scan-back {
+  background: transparent;
+  border: 1.5px solid #1e1e1e;
+  border-radius: 10px;
+  color: #555;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 12px 18px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-scan-back:hover { border-color: #333; color: #aaa; }
+
+/* Modality badge in history */
+.hist-modality {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #00ffc2;
+  background: #00ffc210;
+  border: 1px solid #00ffc230;
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-bottom: 4px;
+}
+
+/* ── MOBILE ──────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+
+  /* ── Header: 2-row layout ── */
+  .setup-header {
+    row-gap: 0;
+    flex-wrap: wrap;
+  }
+  .logo {
+    width: 48px;
+  }
+  .header-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .tagline {
+    font-size: 0.7rem;
+  }
+  .credits {
+    font-size: 0.64rem;
+  }
+  .header-utils {
+    order: 3;          /* wrap to its own row */
+    width: 100%;
+    border-top: 1px solid #1a1a1a;
+    margin-top: 10px;
+    padding-top: 10px;
+    justify-content: stretch;
+    gap: 8px;
+  }
+  .util-btn {
+    flex: 1;
+    text-align: center;
+    padding: 10px 8px;
+    font-size: 0.8rem;
+  }
+
+  /* ── Modality cards: compact horizontal layout ── */
+  .modality-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .modality-card {
+    flex-direction: row;
+    text-align: left;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 14px 16px;
+    gap: 14px;
+    border-radius: 14px;
+  }
+  .modality-card::after {
+    background: radial-gradient(ellipse at 0% 50%, #00ffc210 0%, transparent 60%);
+  }
+  .modality-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+  .modality-text {
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .modality-name {
+    font-size: 0.95rem;
+  }
+  .modality-sub {
+    font-size: 0.68rem;
+  }
+
+  /* ── Exercise pills: full width ── */
+  .movement-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Setup footer ── */
+  .setup-controls {
+    flex-wrap: wrap;
+  }
+  .btn-start {
+    flex: 1 1 100%;
+    padding: 14px;
+  }
+
+  /* ── Workout screen topbar ── */
+  .workout-topbar {
+    padding: 0 12px;
+    padding-top: env(safe-area-inset-top);
+    min-height: calc(52px + env(safe-area-inset-top));
+  }
+  .workout-topbar p {
+    font-size: 0.82rem;
+  }
+  .topbar-right {
+    font-size: 0.72rem;
+    gap: 8px;
+  }
+
+  /* ── Scan screen ── */
+  .scan-hint {
+    white-space: normal;
+    text-align: center;
+    width: calc(100% - 32px);
+    left: 16px;
+    right: 16px;
+    transform: none;
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+  .scan-big-count {
+    font-size: 5rem;
+  }
+
+  /* ── Cue display ── */
+  .cue-display {
+    white-space: normal;
+    text-align: center;
+    width: calc(100% - 32px);
+    left: 16px;
+    right: 16px;
+    transform: none;
+    font-size: 0.9rem;
+  }
+}
